@@ -1023,7 +1023,7 @@ public class EMFRenderer
     public void clip(Shape shape)
     {
 //        g2.clip(shape);
-    	mCanvas.clipPath(getPath(shape), Region.Op.REPLACE);
+    	mCanvas.clipPath(getPath(shape));
     }
 
     public Shape getClip()

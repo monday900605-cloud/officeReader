@@ -34,14 +34,18 @@ import com.wxiwei.office.system.IControl;
 import com.wxiwei.office.system.dialog.MessageDialog;
 import com.wxiwei.office.system.dialog.QuestionDialog;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.SearchManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.ClipboardManager;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.view.Window;
@@ -50,6 +54,9 @@ import android.widget.LinearLayout.LayoutParams;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 
 /**
  * 文件列表页面
@@ -97,21 +104,22 @@ public class FileListActivity extends Activity implements ISearchResult
         }
         mHeight = getResources().getDisplayMetrics().heightPixels;
         fileFrame = new FileFrame(getApplicationContext());
-        
-        fileFrame.post(new Runnable()
-        {
-            public void run()
-            {
-                initListener();
-                init();
-            }
-        });
+        Log.d("MAIN", "OnCreated");
         setTheme(control.getSysKit().isVertical(this) ? 
             R.style.title_background_vertical : R.style.title_background_horizontal);
         setContentView(fileFrame);
         dialogAction = new FileDialogAction(control);
         fileSortType = new FileSortType();
         dbService = new DBService(getApplicationContext());
+
+        if (hasStoragePermission())
+        {
+            startFileBrowser();
+        }
+        else
+        {
+            requestStoragePermission();
+        }
     }
     
     /**
@@ -1158,4 +1166,138 @@ public class FileListActivity extends Activity implements ISearchResult
     private DBService dbService;
     //
     private Search search;    
+    //
+    private boolean initScheduled;
+    //
+    private static final int REQUEST_CODE_STORAGE_PERMISSION = 0x1001;
+
+    /**
+     * start file browser initialization once permission granted
+     */
+    private void startFileBrowser()
+    {
+        if (initScheduled)
+        {
+            return;
+        }
+        initScheduled = true;
+        fileFrame.post(new Runnable()
+        {
+            public void run()
+            {
+                initListener();
+                init();
+            }
+        });
+    }
+
+    /**
+     * request runtime storage permission for Android 6.0+
+     */
+    private void requestStoragePermission()
+    {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+        {
+            requestPermissions(getRequiredPermissions(), REQUEST_CODE_STORAGE_PERMISSION);
+        }
+    }
+
+    /**
+     * permission result callback
+     */
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+        @NonNull int[] grantResults)
+    {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_CODE_STORAGE_PERMISSION)
+        {
+            if (areAllPermissionsGranted(grantResults))
+            {
+                startFileBrowser();
+            }
+            else
+            {
+                handlePermissionDenied();
+            }
+        }
+    }
+
+    /**
+     * check if storage permission granted
+     * @return
+     */
+    private boolean hasStoragePermission()
+    {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M)
+        {
+            return true;
+        }
+        String[] permissions = getRequiredPermissions();
+        for (String permission : permissions)
+        {
+            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * determine required permissions based on API level
+     * @return
+     */
+    private String[] getRequiredPermissions()
+    {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+        {
+            return new String[]
+            {
+                Manifest.permission.READ_MEDIA_IMAGES,
+                Manifest.permission.READ_MEDIA_VIDEO,
+                Manifest.permission.READ_MEDIA_AUDIO
+            };
+        }
+        else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+        {
+            return new String[] { Manifest.permission.READ_EXTERNAL_STORAGE };
+        }
+        else
+        {
+            return new String[]
+            {
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            };
+        }
+    }
+
+    /**
+     * verifies granted results
+     */
+    private boolean areAllPermissionsGranted(int[] grantResults)
+    {
+        if (grantResults == null || grantResults.length == 0)
+        {
+            return false;
+        }
+        for (int result : grantResults)
+        {
+            if (result != PackageManager.PERMISSION_GRANTED)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * show feedback when storage permission denied
+     */
+    private void handlePermissionDenied()
+    {
+        Toast.makeText(this, R.string.dialog_storage_permission_required, Toast.LENGTH_LONG).show();
+        finish();
+    }
 }

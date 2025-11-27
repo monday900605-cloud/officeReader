@@ -174,7 +174,7 @@ public final class MovieShape extends Picture
         if (lst == null)
             return null;
 
-        Record[] r = lst.getChildRecords();
+        com.wxiwei.office.fc.hslf.record.Record[] r = lst.getChildRecords();
         for (int i = 0; i < r.length; i++)
         {
             if (r[i] instanceof ExMCIMovie)

@@ -271,9 +271,17 @@ public class SheetReader
         boolean hidden;
         
         //default column width
-        if(col.attributeValue("width") != null)
+        String widthAttr = col.attributeValue("width");
+        if(widthAttr != null)
         {
-            width = Double.parseDouble(col.attributeValue("width")) * SSConstant.COLUMN_CHAR_WIDTH * MainConstant.POINT_TO_PIXEL;
+            try
+            {
+                width = Double.parseDouble(widthAttr) * SSConstant.COLUMN_CHAR_WIDTH * MainConstant.POINT_TO_PIXEL;
+            }
+            catch (NumberFormatException e)
+            {
+                width = 0;
+            }
         }
         else
         {
@@ -281,9 +289,17 @@ public class SheetReader
         }        
         
         //hidden
-        if(col.attributeValue("hidden") != null)
+        String hiddenAttr = col.attributeValue("hidden");
+        if(hiddenAttr != null)
         {
-            hidden = (Integer.parseInt(col.attributeValue("hidden")) != 0);
+            try
+            {
+                hidden = (Integer.parseInt(hiddenAttr) != 0);
+            }
+            catch (NumberFormatException e)
+            {
+                hidden = Boolean.parseBoolean(hiddenAttr);
+            }
         }
         else
         {
@@ -291,9 +307,17 @@ public class SheetReader
         }
         
         //default column style
-        if(col.attributeValue("style") != null)
+        String styleAttr = col.attributeValue("style");
+        if(styleAttr != null)
         {
-            styleIndex = Integer.parseInt(col.attributeValue("style"));
+            try
+            {
+                styleIndex = Integer.parseInt(styleAttr);
+            }
+            catch (NumberFormatException e)
+            {
+                styleIndex = 0;
+            }
         }
         
         sheet.addColumnInfo(new ColumnInfo(min, max, (int)width, styleIndex, hidden));
@@ -596,14 +620,30 @@ public class SheetReader
             height = (Float.parseFloat(rowElement.attributeValue("ht")) * MainConstant.POINT_TO_PIXEL);
         }
         
-        if(rowElement.attributeValue("hidden") != null)
+        String hiddenAttr = rowElement.attributeValue("hidden");
+        if(hiddenAttr != null)
         {
-            hidden = (Integer.parseInt(rowElement.attributeValue("hidden")) != 0);          
+            try
+            {
+                hidden = (Integer.parseInt(hiddenAttr) != 0);
+            }
+            catch (NumberFormatException e)
+            {
+                hidden = Boolean.parseBoolean(hiddenAttr);
+            }
         }       
         
-        if(rowElement.attributeValue("s") != null)
+        String styleAttr = rowElement.attributeValue("s");
+        if(styleAttr != null)
         {
-            style = Integer.parseInt(rowElement.attributeValue("s"));          
+            try
+            {
+                style = Integer.parseInt(styleAttr);
+            }
+            catch (NumberFormatException e)
+            {
+                style = 0;
+            }
         }
         
         Row row = new Row(getEndBySpans(spans));
@@ -628,14 +668,30 @@ public class SheetReader
             height = (int)(Double.parseDouble(rowElement.attributeValue("ht")) * MainConstant.POINT_TO_PIXEL);
         }
         
-        if(rowElement.attributeValue("hidden") != null)
+        String hiddenAttr = rowElement.attributeValue("hidden");
+        if(hiddenAttr != null)
         {
-            hidden = (Integer.parseInt(rowElement.attributeValue("hidden")) != 0);          
+            try
+            {
+                hidden = (Integer.parseInt(hiddenAttr) != 0);
+            }
+            catch (NumberFormatException e)
+            {
+                hidden = Boolean.parseBoolean(hiddenAttr);
+            }
         }       
         
-        if(rowElement.attributeValue("s") != null)
+        String styleAttr = rowElement.attributeValue("s");
+        if(styleAttr != null)
         {
-            style = Integer.parseInt(rowElement.attributeValue("s"));          
+            try
+            {
+                style = Integer.parseInt(styleAttr);
+            }
+            catch (NumberFormatException e)
+            {
+                style = 0;
+            }
         } 
         
         row.setRowPixelHeight(height);

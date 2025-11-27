@@ -6,6 +6,9 @@
  */
 package com.wxiwei.office.ss.sheetbar;
 
+import java.io.IOException;
+import java.io.InputStream;
+
 import android.content.Context;
 import android.graphics.drawable.Drawable;
 
@@ -31,58 +34,30 @@ public class SheetbarResManager
     {
         this.context = context;
         
-        ClassLoader loader = context.getClassLoader();
         //sheetbar background
-        sheetbarBG =  Drawable.createFromResourceStream(context.getResources(), null, 
-            loader.getResourceAsStream(SheetbarResConstant.RESNAME_SHEETBAR_BG), 
-            SheetbarResConstant.RESNAME_SHEETBAR_BG);
+        sheetbarBG = loadDrawable(SheetbarResConstant.RESNAME_SHEETBAR_BG);
         
         //shadow
-        sheetbarLeftShadow= Drawable.createFromResourceStream(context.getResources(), null,
-            loader.getResourceAsStream(SheetbarResConstant.RESNAME_SHEETBAR_SHADOW_LEFT),
-            SheetbarResConstant.RESNAME_SHEETBAR_SHADOW_LEFT);
-        
-        sheetbarRightShadow= Drawable.createFromResourceStream(context.getResources(), null,
-            loader.getResourceAsStream(SheetbarResConstant.RESNAME_SHEETBAR_SHADOW_RIGHT),
-            SheetbarResConstant.RESNAME_SHEETBAR_SHADOW_RIGHT);
+        sheetbarLeftShadow = loadDrawable(SheetbarResConstant.RESNAME_SHEETBAR_SHADOW_LEFT);
+        sheetbarRightShadow = loadDrawable(SheetbarResConstant.RESNAME_SHEETBAR_SHADOW_RIGHT);
         
         //hSeparator
-        hSeparator = Drawable.createFromResourceStream(context.getResources(), null,
-            loader.getResourceAsStream(SheetbarResConstant.RESNAME_SHEETBAR_SEPARATOR_H),
-            SheetbarResConstant.RESNAME_SHEETBAR_SEPARATOR_H);
+        hSeparator = loadDrawable(SheetbarResConstant.RESNAME_SHEETBAR_SEPARATOR_H);
             
         //normal state
-        normalLeft = Drawable.createFromResourceStream(context.getResources(), null, 
-            loader.getResourceAsStream(SheetbarResConstant.RESNAME_SHEETBUTTON_NORMAL_LEFT), 
-            SheetbarResConstant.RESNAME_SHEETBUTTON_NORMAL_LEFT);        
-        normalRight = Drawable.createFromResourceStream(context.getResources(), null, 
-            loader.getResourceAsStream(SheetbarResConstant.RESNAME_SHEETBUTTON_NORMAL_RIGHT), 
-            SheetbarResConstant.RESNAME_SHEETBUTTON_NORMAL_RIGHT);
-        normalMiddle = Drawable.createFromResourceStream(context.getResources(), null, 
-            loader.getResourceAsStream(SheetbarResConstant.RESNAME_SHEETBUTTON_NORMAL_MIDDLE), 
-            SheetbarResConstant.RESNAME_SHEETBUTTON_NORMAL_MIDDLE);
+        normalLeft = loadDrawable(SheetbarResConstant.RESNAME_SHEETBUTTON_NORMAL_LEFT);        
+        normalRight = loadDrawable(SheetbarResConstant.RESNAME_SHEETBUTTON_NORMAL_RIGHT);
+        normalMiddle = loadDrawable(SheetbarResConstant.RESNAME_SHEETBUTTON_NORMAL_MIDDLE);
         
         //push state
-        pushLeft = Drawable.createFromResourceStream(context.getResources(), null, 
-            loader.getResourceAsStream(SheetbarResConstant.RESNAME_SHEETBUTTON_PUSH_LEFT), 
-            SheetbarResConstant.RESNAME_SHEETBUTTON_PUSH_LEFT);
-        pushMiddle = Drawable.createFromResourceStream(context.getResources(), null, 
-            loader.getResourceAsStream(SheetbarResConstant.RESNAME_SHEETBUTTON_PUSH_MIDDLE), 
-            SheetbarResConstant.RESNAME_SHEETBUTTON_PUSH_MIDDLE);
-        pushRight = Drawable.createFromResourceStream(context.getResources(), null, 
-            loader.getResourceAsStream(SheetbarResConstant.RESNAME_SHEETBUTTON_PUSH_RIGHT), 
-            SheetbarResConstant.RESNAME_SHEETBUTTON_PUSH_RIGHT);
+        pushLeft = loadDrawable(SheetbarResConstant.RESNAME_SHEETBUTTON_PUSH_LEFT);
+        pushMiddle = loadDrawable(SheetbarResConstant.RESNAME_SHEETBUTTON_PUSH_MIDDLE);
+        pushRight = loadDrawable(SheetbarResConstant.RESNAME_SHEETBUTTON_PUSH_RIGHT);
         
         //focus state
-        focusLeft = Drawable.createFromResourceStream(context.getResources(), null, 
-            loader.getResourceAsStream(SheetbarResConstant.RESNAME_SHEETBUTTON_FOCUS_LEFT), 
-            SheetbarResConstant.RESNAME_SHEETBUTTON_FOCUS_LEFT);
-        focusMiddle = Drawable.createFromResourceStream(context.getResources(), null, 
-            loader.getResourceAsStream(SheetbarResConstant.RESNAME_SHEETBUTTON_FOCUS_MIDDLE), 
-            SheetbarResConstant.RESNAME_SHEETBUTTON_FOCUS_MIDDLE);
-        focusRight = Drawable.createFromResourceStream(context.getResources(), null, 
-            loader.getResourceAsStream(SheetbarResConstant.RESNAME_SHEETBUTTON_FOCUS_RIGHT), 
-            SheetbarResConstant.RESNAME_SHEETBUTTON_FOCUS_RIGHT);
+        focusLeft = loadDrawable(SheetbarResConstant.RESNAME_SHEETBUTTON_FOCUS_LEFT);
+        focusMiddle = loadDrawable(SheetbarResConstant.RESNAME_SHEETBUTTON_FOCUS_MIDDLE);
+        focusRight = loadDrawable(SheetbarResConstant.RESNAME_SHEETBUTTON_FOCUS_RIGHT);
         
     }
     
@@ -106,9 +81,7 @@ public class SheetbarResManager
                 return normalLeft;
                 
             case SheetbarResConstant.RESID_SHEETBUTTON_NORMAL_MIDDLE:
-                return Drawable.createFromResourceStream(context.getResources(), null, 
-                    context.getClassLoader().getResourceAsStream(SheetbarResConstant.RESNAME_SHEETBUTTON_NORMAL_MIDDLE), 
-                    SheetbarResConstant.RESNAME_SHEETBUTTON_NORMAL_MIDDLE);
+                return loadDrawable(SheetbarResConstant.RESNAME_SHEETBUTTON_NORMAL_MIDDLE);
                 
             case SheetbarResConstant.RESID_SHEETBUTTON_NORMAL_RIGHT:
                 return normalRight;
@@ -155,6 +128,26 @@ public class SheetbarResManager
         focusLeft = null;
         focusMiddle = null;
         focusRight = null;
+    }
+    
+    private Drawable loadDrawable(String assetPath)
+    {
+        try
+        {
+            InputStream inputStream = context.getAssets().open(assetPath);
+            try
+            {
+                return Drawable.createFromStream(inputStream, assetPath);
+            }
+            finally
+            {
+                inputStream.close();
+            }
+        }
+        catch (IOException e)
+        {
+            return null;
+        }
     }
     
     private Context context;

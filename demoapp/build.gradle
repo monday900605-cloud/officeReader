@@ -1,5 +1,5 @@
 plugins {
-    id 'com.android.library'
+    id 'com.android.application'
 }
 
 def resolveIntProperty = { String propertyName, int fallback ->
@@ -7,15 +7,15 @@ def resolveIntProperty = { String propertyName, int fallback ->
 }
 
 android {
-    namespace 'com.wxiwei.office.officereader'
+    namespace 'com.wxiwei.office.demo'
     compileSdk resolveIntProperty('YASOON_COMPILE_SDK_VERSION', 34)
 
     defaultConfig {
+        applicationId "com.wxiwei.office.demo"
         minSdk resolveIntProperty('YASSON_MIN_SDK_VERSION', 21)
         targetSdk resolveIntProperty('YASOON_TARGER_SDK_VERSION', 34)
         versionCode 1
         versionName "1.0"
-        consumerProguardFiles 'proguard-rules.pro'
     }
 
     buildTypes {
@@ -32,6 +32,6 @@ android {
 }
 
 dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation project(':')
     implementation 'androidx.appcompat:appcompat:1.6.1'
 }

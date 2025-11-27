@@ -251,6 +251,7 @@ public class ErrorUtil
                             || ex instanceof IllegalArgumentException
                             || ex instanceof ClassCastException)
                         {
+                            ex.printStackTrace();
                             err = control.getMainFrame().getLocalString("DIALOG_SYSTEM_CRASH");
                             errorCode = SYSTEM_CRASH;
                         }

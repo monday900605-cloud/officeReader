@@ -10,6 +10,8 @@ package com.wxiwei.office.officereader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,12 +38,15 @@ import com.wxiwei.office.system.MainControl;
 import com.wxiwei.office.system.beans.pagelist.IPageListViewListener;
 import com.wxiwei.office.system.dialog.ColorPickerDialog;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.Dialog;
+import android.content.ContentResolver;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnDismissListener;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
@@ -52,6 +57,7 @@ import android.graphics.PixelFormat;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Build;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -59,6 +65,11 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.widget.LinearLayout.LayoutParams;
 import android.widget.Toast;
+import android.database.Cursor;
+import android.provider.OpenableColumns;
+
+import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 
 /**
  * 文件注释
@@ -85,20 +96,11 @@ public class AppActivity extends Activity implements IMainFrame
     public void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
-        //requestWindowFeature(Window.FEATURE_NO_TITLE);        
-        requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
+//        requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
 
         control = new MainControl(this);
         appFrame = new AppFrame(getApplicationContext());
-        appFrame.post(new Runnable()
-        {
-            /**
-             */
-            public void run()
-            {
-                init();
-            }
-        });
         control.setOffictToPicture(new IOfficeToPicture()
         {
             public Bitmap getBitmap(int componentWidth, int componentHeight)
@@ -156,6 +158,15 @@ public class AppActivity extends Activity implements IMainFrame
         });
         setTheme(control.getSysKit().isVertical(this) ? R.style.title_background_vertical   : R.style.title_background_horizontal);
         setContentView(appFrame);
+
+        if (hasStoragePermission())
+        {
+            scheduleInit();
+        }
+        else
+        {
+            requestStoragePermission();
+        }
     }
     
     private void saveBitmapToFile(Bitmap bitmap)
@@ -358,28 +369,27 @@ public class AppActivity extends Activity implements IMainFrame
         dbService = new DBService(getApplicationContext());
 
         filePath = intent.getStringExtra(MainConstant.INTENT_FILED_FILE_PATH);
-        // 文件关联打开文件
-        if (filePath == null)
+        Uri dataUri = intent.getData();
+        if (filePath == null && dataUri != null)
         {
-            this.filePath = intent.getDataString();
-            int index = getFilePath().indexOf(":");
-            if (index > 0)
-            {
-                filePath = filePath.substring(index + 3);
-            }
-            filePath = Uri.decode(filePath);
+            resolvedDisplayName = queryDisplayName(dataUri);
+            filePath = resolveUriToFilePath(dataUri);
         }
 
-        // 显示打开文件名称
-        int index = filePath.lastIndexOf(File.separator);
-        if (index > 0)
+        if (filePath == null)
         {
-            setTitle(filePath.substring(index + 1));
+            Toast.makeText(this, R.string.toast_open_file_error, Toast.LENGTH_LONG).show();
+            finish();
+            return;
         }
-        else
+
+        String title = resolvedDisplayName;
+        if (title == null)
         {
-            setTitle(filePath);
+            int index = filePath.lastIndexOf(File.separator);
+            title = index > 0 ? filePath.substring(index + 1) : filePath;
         }
+        setTitle(title);
 
         boolean isSupport = FileKit.instance().isSupport(filePath);
         //写入本地数据库
@@ -393,6 +403,125 @@ public class AppActivity extends Activity implements IMainFrame
         control.openFile(filePath);
         // initialization marked
         initMarked();
+    }
+
+    private String resolveUriToFilePath(Uri uri)
+    {
+        if (uri == null)
+        {
+            return null;
+        }
+        if ("file".equalsIgnoreCase(uri.getScheme()))
+        {
+            return Uri.decode(uri.getPath());
+        }
+        if ("content".equalsIgnoreCase(uri.getScheme()))
+        {
+            try
+            {
+                return copyContentUriToCache(uri);
+            }
+            catch (IOException e)
+            {
+                toast.setText(R.string.toast_open_file_error);
+                toast.show();
+                return null;
+            }
+        }
+        return uri.toString();
+    }
+
+    private String queryDisplayName(Uri uri)
+    {
+        if (uri == null)
+        {
+            return null;
+        }
+        if ("content".equalsIgnoreCase(uri.getScheme()))
+        {
+            ContentResolver resolver = getContentResolver();
+            if (resolver != null)
+            {
+                Cursor cursor = null;
+                try
+                {
+                    cursor = resolver.query(uri, new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null);
+                    if (cursor != null && cursor.moveToFirst())
+                    {
+                        String name = cursor.getString(cursor.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME));
+                        if (name != null && name.length() > 0)
+                        {
+                            return name;
+                        }
+                    }
+                }
+                finally
+                {
+                    if (cursor != null)
+                    {
+                        cursor.close();
+                    }
+                }
+            }
+        }
+        String lastSegment = uri.getLastPathSegment();
+        return lastSegment != null ? lastSegment : uri.toString();
+    }
+
+    private String copyContentUriToCache(Uri uri) throws IOException
+    {
+        ContentResolver resolver = getContentResolver();
+        if (resolver == null)
+        {
+            throw new IOException("ContentResolver unavailable");
+        }
+        File cacheDir = new File(getCacheDir(), "imports");
+        if (!cacheDir.exists() && !cacheDir.mkdirs())
+        {
+            throw new IOException("Unable to create cache directory");
+        }
+
+        String displayName = resolvedDisplayName != null ? resolvedDisplayName : queryDisplayName(uri);
+        if (displayName == null || displayName.trim().length() == 0)
+        {
+            displayName = "imported_file";
+        }
+
+        String baseName = displayName;
+        String extension = "";
+        int dotIndex = displayName.lastIndexOf('.');
+        if (dotIndex >= 0)
+        {
+            baseName = displayName.substring(0, dotIndex);
+            extension = displayName.substring(dotIndex);
+        }
+
+        File target = new File(cacheDir, displayName);
+        int duplicateIndex = 1;
+        while (target.exists())
+        {
+            target = new File(cacheDir, baseName + "_" + duplicateIndex + extension);
+            duplicateIndex++;
+        }
+
+        try (InputStream inputStream = resolver.openInputStream(uri);
+             OutputStream outputStream = new FileOutputStream(target))
+        {
+            if (inputStream == null)
+            {
+                throw new IOException("Unable to open input stream");
+            }
+            byte[] buffer = new byte[8192];
+            int length;
+            while ((length = inputStream.read(buffer)) != -1)
+            {
+                outputStream.write(buffer, 0, length);
+            }
+            outputStream.flush();
+        }
+
+        cachedContentFile = target;
+        return target.getAbsolutePath();
     }
 
     /**
@@ -1391,6 +1520,135 @@ public class AppActivity extends Activity implements IMainFrame
             eraserButton = null;
             settingsButton = null;
         }
+        if (cachedContentFile != null && cachedContentFile.exists())
+        {
+            cachedContentFile.delete();
+            cachedContentFile = null;
+        }
+    }
+
+    /**
+     * ensure init only runs once when permission available
+     */
+    private void scheduleInit()
+    {
+        if (initScheduled)
+        {
+            return;
+        }
+        initScheduled = true;
+        appFrame.post(new Runnable()
+        {
+            public void run()
+            {
+                init();
+            }
+        });
+    }
+
+    /**
+     * runtime permission request
+     */
+    private void requestStoragePermission()
+    {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+        {
+            requestPermissions(getRequiredPermissions(), REQUEST_CODE_STORAGE_PERMISSION);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+        @NonNull int[] grantResults)
+    {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_CODE_STORAGE_PERMISSION)
+        {
+            if (areAllPermissionsGranted(grantResults))
+            {
+                scheduleInit();
+            }
+            else
+            {
+                handlePermissionDenied();
+            }
+        }
+    }
+
+    /**
+     * check storage permission state
+     */
+    private boolean hasStoragePermission()
+    {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M)
+        {
+            return true;
+        }
+        String[] permissions = getRequiredPermissions();
+        for (String permission : permissions)
+        {
+            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * determine permissions based on API level
+     */
+    private String[] getRequiredPermissions()
+    {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+        {
+            return new String[]
+            {
+                Manifest.permission.READ_MEDIA_IMAGES,
+                Manifest.permission.READ_MEDIA_VIDEO,
+                Manifest.permission.READ_MEDIA_AUDIO
+            };
+        }
+        else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+        {
+            return new String[] { Manifest.permission.READ_EXTERNAL_STORAGE };
+        }
+        else
+        {
+            return new String[]
+            {
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            };
+        }
+    }
+
+    /**
+     * verify grant result
+     */
+    private boolean areAllPermissionsGranted(int[] grantResults)
+    {
+        if (grantResults == null || grantResults.length == 0)
+        {
+            return false;
+        }
+        for (int result : grantResults)
+        {
+            if (result != PackageManager.PERMISSION_GRANTED)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * handle permission denial gracefully
+     */
+    private void handlePermissionDenied()
+    {
+        Toast.makeText(this, R.string.dialog_storage_permission_required, Toast.LENGTH_LONG).show();
+        finish();
     }
 
     //
@@ -1439,4 +1697,10 @@ public class AppActivity extends Activity implements IMainFrame
     private boolean fullscreen;
     //
     private String tempFilePath;
+    private String resolvedDisplayName;
+    private File cachedContentFile;
+    //
+    private boolean initScheduled;
+    //
+    private static final int REQUEST_CODE_STORAGE_PERMISSION = 0x2001;
 }

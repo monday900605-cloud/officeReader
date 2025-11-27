@@ -463,21 +463,45 @@ public class StyleReader
         }        
         
         //rotation
-        if(alignment.attributeValue("textRotation") != null)
+        String textRotation = alignment.attributeValue("textRotation");
+        if(textRotation != null)
         {
-            cellStyle.setRotation((short)Integer.parseInt(alignment.attributeValue("textRotation")));
+            try
+            {
+                cellStyle.setRotation((short)Integer.parseInt(textRotation));
+            }
+            catch (NumberFormatException e)
+            {
+                cellStyle.setRotation((short)0);
+            }
         }
         
         //wrapText
-        if(alignment.attributeValue("wrapText") != null)
+        String wrapText = alignment.attributeValue("wrapText");
+        if(wrapText != null)
         {
-            cellStyle.setWrapText(Integer.parseInt(alignment.attributeValue("wrapText")) != 0);                    
+            try
+            {
+                cellStyle.setWrapText(Integer.parseInt(wrapText) != 0);
+            }
+            catch (NumberFormatException e)
+            {
+                cellStyle.setWrapText(Boolean.parseBoolean(wrapText));
+            }
         }
         
         //indent
-        if(alignment.attributeValue("indent") != null)
+        String indent = alignment.attributeValue("indent");
+        if(indent != null)
         {
-            cellStyle.setIndent((short)Integer.parseInt(alignment.attributeValue("indent")));
+            try
+            {
+                cellStyle.setIndent((short)Integer.parseInt(indent));
+            }
+            catch (NumberFormatException e)
+            {
+                cellStyle.setIndent((short)0);
+            }
         }
     }
     

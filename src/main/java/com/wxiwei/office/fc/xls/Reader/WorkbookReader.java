@@ -489,9 +489,17 @@ public class WorkbookReader
             else if(name.equals("workbookPr"))
             {
                 boolean usingDate1904 = false;
-                if(elem.attributeValue("date1904") != null)
+                String date1904 = elem.attributeValue("date1904");
+                if(date1904 != null)
                 {
-                    usingDate1904 = (Integer.parseInt(elem.attributeValue("date1904")) != 0);
+                    try
+                    {
+                        usingDate1904 = (Integer.parseInt(date1904) != 0);
+                    }
+                    catch (NumberFormatException e)
+                    {
+                        usingDate1904 = Boolean.parseBoolean(date1904);
+                    }
                 }
                 book.setUsing1904DateWindowing(usingDate1904);
             }

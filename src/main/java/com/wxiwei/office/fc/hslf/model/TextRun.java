@@ -42,7 +42,7 @@ public final class TextRun
      * all text run records that follow TextHeaderAtom.
      * (there can be misc InteractiveInfo, TxInteractiveInfo and other records)
      */
-    protected Record[] _records;
+    protected com.wxiwei.office.fc.hslf.record.Record[] _records;
 
     /**
     * Constructs a Text Run from a Unicode text block
@@ -380,7 +380,7 @@ public final class TextRun
 
                 // Use the TextHeaderAtom to do the swap on the parent
                 RecordContainer parent = _headerAtom.getParentRecord();
-                Record[] cr = parent.getChildRecords();
+                com.wxiwei.office.fc.hslf.record.Record[] cr = parent.getChildRecords();
                 for (int i = 0; i < cr.length; i++)
                 {
                     // Look for TextBytesAtom
@@ -588,7 +588,7 @@ public final class TextRun
         RecordContainer runAtomsParent = _headerAtom.getParentRecord();
 
         // Add the new StyleTextPropAtom after the TextCharsAtom / TextBytesAtom
-        Record addAfter = _byteAtom;
+        com.wxiwei.office.fc.hslf.record.Record addAfter = _byteAtom;
         if (_byteAtom == null)
         {
             addAfter = _charAtom;
@@ -810,7 +810,7 @@ public final class TextRun
      *
      * @return text run records
      */
-    public Record[] getRecords()
+    public com.wxiwei.office.fc.hslf.record.Record[] getRecords()
     {
         return _records;
     }
